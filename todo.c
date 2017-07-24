@@ -1,17 +1,25 @@
-/* Written by Sebastian Baker */
+/*
+ * Written by Sebastian Baker
+ * A C program intended to generate a todo list in a .txt file.
+ * Written for practice and revision in C programming.
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
 
+#define NUM_ARGS 3
 #define LINE_LEN 50
 #define LINES_B_DAYS 1
 #define LINES_B_HEADS 2
 #define SEC_IN_DAY 60*60*24
 #define DAYS_IN_WEEK 7
 #define FILENAME "MyPlan"
-
+#define ITOA_BASE 10
+#define WKNUM_NUM_CHARS 2
+#define MALLOC_ERROR_MESSAGE "Error allocating memory...\n"
+#define INPUT_INSTRUCTIONS "Usage: ./todo <days till first day> <weeknum> > file\n"
 
 void print_update(struct tm *timeinfo, FILE *fp);
 void print_date(time_t info, FILE *fp);
@@ -19,50 +27,36 @@ void print_weeks(int weeknum, time_t info, FILE *fp);
 void print_day(time_t info, FILE *fp);
 void print_gap(int n, FILE *fp);
 void print_line(int n, FILE *fp);
-char * itoa (int value, char *result, int base);
+void generate_filename(int wknum, char * filename);
+void init_times(time_t * time_raw, time_t * wkstart_raw, struct tm * time_struct, int secondsTillStart);
+FILE * open_file();
+char * myitoa(int value);
+char * itoa(int value, char *result, int base);
 
 
 int main(int argc, char *argv[]) {
-	if (argc != 3) {
-		printf("Usage: ./planner <days till planner start> <weeknum> > file\n");
+	
+	// Deal with the inputs
+	if (argc != NUM_ARGS) {
+		printf(INPUT_INSTRUCTIONS);
 		exit(EXIT_FAILURE);
 	}
-
-	time_t c_rawtime, ws_rawtime;
 	int weeknum = atoi(argv[2]);
-	struct tm *c_datetime;
+	int secondsTillStart = atoi(argv[1])*SEC_IN_DAY;
+	
+	// Initialise times
+	time_t time_raw, wkstart_raw;
+	struct tm time_struct;
+	init_times( &time_raw, &wkstart_raw, &time_struct, secondsTillStart);
 
 	// Generate filename & open file
-	char *wknumchar;
-	wknumchar = (char*)malloc(sizeof(char)*2);
-	if(!wknumchar) {
-		printf("Error allocating memory...\n");
-		exit(-1);
-	}
-	itoa(weeknum, wknumchar, 10);
+	FILE *fp = open_file(weeknum);
 
-	char filename[80];
-
-	strcpy(filename, FILENAME);
-	strcat(filename, "_week");
-	strcat(filename, wknumchar);
-	strcat(filename, ".txt");
-
-	FILE *fp;
-	fp = fopen(filename, "a");
-
-	//current date/time
-	time( &c_rawtime );
-	c_datetime = localtime(&c_rawtime);
-	print_update(c_datetime, fp);
-	fprintf(fp, "\n");
-
-	//days till monday to get week start time
-	ws_rawtime = c_rawtime + (atoi(argv[1]))*SEC_IN_DAY;
-	fprintf(fp, "\n");
+	//current date/time at top of page
+	print_update(&time_struct, fp);
 
 	//print agenda
-	print_weeks(weeknum, ws_rawtime, fp);
+	print_weeks(weeknum, wkstart_raw, fp);
 
 	//print other
 	print_gap(LINES_B_HEADS, fp);
@@ -78,9 +72,37 @@ int main(int argc, char *argv[]) {
 
 	fflush(fp);
 	fclose(fp);
-	printf("done/n");
+	printf("done\n");
 
 	return 0;
+}
+
+void init_times(time_t * time_raw, time_t * wkstart_raw, struct tm * time_struct, int secondsTillStart){
+	time( time_raw );
+	*wkstart_raw = *time_raw + (secondsTillStart);
+	time_struct = localtime(time_raw);
+}
+
+FILE * open_file(weeknum){
+	char filename[80];
+	generate_filename(weeknum, filename);
+	FILE *fp;
+	fp = fopen(filename, "a");
+	return fp;
+}
+
+void generate_filename(int wknum, char * filename){
+	char *wknumchar;
+	wknumchar = (char*)malloc(sizeof(char)*WKNUM_NUM_CHARS);
+	if(!wknumchar) {
+		printf(MALLOC_ERROR_MESSAGE);
+		exit(EXIT_FAILURE);
+	}
+	
+	itoa(wknum, wknumchar, 10);
+	strcpy(filename, FILENAME);
+	strcat(filename, wknumchar);
+	strcat(filename, ".txt");
 }
 
 
@@ -109,7 +131,7 @@ void print_day(time_t info, FILE *fp){
 
 
 void print_update(struct tm *timeinfo, FILE *fp){
-	fprintf(fp,  "Updated: %s\n", asctime(timeinfo) );
+	fprintf(fp,  "Updated: %s\n\n", asctime(timeinfo) );
 }
 
 
@@ -138,6 +160,10 @@ void print_line(int n, FILE *fp){
 	}
 }
 
+char * myitoa(int value) {
+	return 0;
+}
+
 char * itoa (int value, char *result, int base){
 	// check that the base if valid
 	if (base < 2 || base > 36) { *result = '\0'; return result; }
@@ -148,7 +174,7 @@ char * itoa (int value, char *result, int base){
 	do {
 		tmp_value = value;
 		value /= base;
-		*ptr++ = "zyxwvutsrqponmlkjihgfedcba9876543210123456789abcdefghijklmnopqrstuvwxyz" [35 + (tmp_value - value * base)];
+		*ptr++ = "0123456789abcdefghijklmnopqrstuvwxyz" [(tmp_value - value * base)];
 	} while ( value );
 
 	// Apply negative sign
