@@ -1,7 +1,8 @@
 /*
  * Written by Sebastian Baker
  * A C program intended to generate a todo list in a .txt file.
- * Written for practice and revision in C programming.
+ * Written for practice and revision in C programming sometime around mid 2016.
+ * Cleaned mid 2017 after reading Robert C. Martin - Clean Code.
  */
 
 #include <stdio.h>
@@ -11,8 +12,6 @@
 
 #define NUM_ARGS 3
 #define LINE_LEN 50
-#define LINES_B_DAYS 1
-#define LINES_B_HEADS 2
 #define SEC_IN_DAY 60*60*24
 #define DAYS_IN_WEEK 7
 #define FILENAME "MyPlan"
@@ -30,18 +29,19 @@ void print_update(myTimeStruct * currentTime, FILE *fp);
 void print_date(time_t info, FILE *fp);
 void print_weeks(int weeknum, time_t info, FILE *fp);
 void print_day(time_t info, FILE *fp);
+void print_other(FILE * fp);
 void print_gap(int n, FILE *fp);
 void print_line(int n, FILE *fp);
 void generate_filename(int wknum, char * filename);
 void init_times(myTimeStruct * currentTime, myTimeStruct  * wkStartTime, int secondsTillStart);
 FILE * open_file();
-char * myitoa(int value);
+void close_file(FILE* fp);
 char * itoa(int value, char *result, int base);
 
 
 int main(int argc, char *argv[]) {
 	
-	// Deal with the inputs
+	// Handle inputs
 	if (argc != NUM_ARGS) {
 		printf(INPUT_INSTRUCTIONS);
 		exit(EXIT_FAILURE);
@@ -58,26 +58,14 @@ int main(int argc, char *argv[]) {
 	}
 	init_times( currentTime, wkStartTime, secondsTillStart);
 
-	 // Generate filename & open file
+	// Print stuff to file
 	FILE *fp = open_file(weeknum);
-
-	// Begin print to file
 	print_update(currentTime, fp);
 	print_weeks(weeknum, wkStartTime->raw, fp);
-	print_gap(LINES_B_HEADS, fp);
-	print_gap(LINES_B_HEADS, fp);
-	fprintf(fp, "OTHER\n=====");
-	print_gap(LINES_B_HEADS, fp);
-	print_gap(LINES_B_HEADS, fp);
-	print_gap(LINES_B_HEADS, fp);
-	print_gap(LINES_B_HEADS, fp);
-	print_gap(LINES_B_HEADS, fp);
-	print_gap(LINES_B_HEADS, fp);
-	print_gap(LINES_B_HEADS, fp);
+	print_other(fp);
+	close_file(fp);
 
-	fflush(fp);
-	fclose(fp);
-
+	// Bye!
 	printf("done\n");
 	return 0;
 }
@@ -97,6 +85,11 @@ FILE * open_file(weeknum){
 	return fp;
 }
 
+void close_file(FILE * fp){
+	fflush(fp);
+	fclose(fp);
+}
+
 void generate_filename(int wknum, char * filename){
 	char *wknumchar;
 	wknumchar = (char*)malloc(sizeof(char)*WKNUM_NUM_CHARS);
@@ -111,23 +104,27 @@ void generate_filename(int wknum, char * filename){
 	strcat(filename, ".txt");
 }
 
+void print_other(FILE * fp){
+	print_gap(2, fp);
+	fprintf(fp, "OTHER\n=====");
+	print_gap(7, fp);
+}
 
 void print_weeks(int weeknum, time_t info, FILE *fp){
 	int i;
-	print_gap(LINES_B_HEADS, fp);
+	print_gap(2, fp);
 	fprintf(fp, "WEEK %02d\n=======", weeknum);
 
 	for (i=0;i<DAYS_IN_WEEK;i++){
 		print_day(info+i*SEC_IN_DAY, fp);
 	}
 
-	print_gap(LINES_B_HEADS, fp);
+	print_gap(1, fp);
 	fprintf(fp, "WEEK %02d\n=======", weeknum+1);
 }
 
-
 void print_day(time_t info, FILE *fp){
-	print_gap(LINES_B_HEADS, fp);
+	print_gap(1, fp);
 	print_line(LINE_LEN, fp);
 	fprintf(fp, "(");
 	print_date(info, fp);
@@ -135,11 +132,9 @@ void print_day(time_t info, FILE *fp){
 	fprintf(fp, "Goals:\n");
 }
 
-
 void print_update(myTimeStruct * currentTime, FILE *fp){
 	fprintf(fp,  "Updated: %s\n\n", asctime(&(currentTime->date)));
 }
-
 
 void print_date(time_t info, FILE *fp){
 	struct tm *timeinfo;
@@ -150,14 +145,12 @@ void print_date(time_t info, FILE *fp){
 	fprintf(fp,  "%s", str);
 }
 
-
 void print_gap(int n, FILE *fp){
 	int i;
 	for (i=1; i<=n; i++){
 		fprintf(fp, "\n");
 	}
 }
-
 
 void print_line(int n, FILE *fp){
 	int i;
@@ -166,10 +159,7 @@ void print_line(int n, FILE *fp){
 	}
 }
 
-char * myitoa(int value) {
-	return 0;
-}
-
+// Taken from somewhere on stackexchange...
 char * itoa (int value, char *result, int base){
 	// check that the base if valid
 	if (base < 2 || base > 36) { *result = '\0'; return result; }
@@ -193,16 +183,4 @@ char * itoa (int value, char *result, int base){
 	}
 	return result;
 }
-
-
-
-
-
-
-
-
-
-
-
-
 
