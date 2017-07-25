@@ -21,14 +21,19 @@
 #define MALLOC_ERROR_MESSAGE "Error allocating memory...\n"
 #define INPUT_INSTRUCTIONS "Usage: ./todo <days till first day> <weeknum> > file\n"
 
-void print_update(struct tm *timeinfo, FILE *fp);
+typedef struct {
+	time_t raw;
+	struct tm date;
+} myTimeStruct;
+
+void print_update(myTimeStruct * currentTime, FILE *fp);
 void print_date(time_t info, FILE *fp);
 void print_weeks(int weeknum, time_t info, FILE *fp);
 void print_day(time_t info, FILE *fp);
 void print_gap(int n, FILE *fp);
 void print_line(int n, FILE *fp);
 void generate_filename(int wknum, char * filename);
-void init_times(time_t * time_raw, time_t * wkstart_raw, struct tm * time_struct, int secondsTillStart);
+void init_times(myTimeStruct * currentTime, myTimeStruct  * wkStartTime, int secondsTillStart);
 FILE * open_file();
 char * myitoa(int value);
 char * itoa(int value, char *result, int base);
@@ -41,24 +46,24 @@ int main(int argc, char *argv[]) {
 		printf(INPUT_INSTRUCTIONS);
 		exit(EXIT_FAILURE);
 	}
-	int weeknum = atoi(argv[2]);
 	int secondsTillStart = atoi(argv[1])*SEC_IN_DAY;
+	int weeknum = atoi(argv[2]);
 	
-	// Initialise times
-	time_t time_raw, wkstart_raw;
-	struct tm time_struct;
-	init_times( &time_raw, &wkstart_raw, &time_struct, secondsTillStart);
+	// Initialise time variables
+	myTimeStruct *currentTime = (myTimeStruct*)malloc(sizeof(myTimeStruct));
+	myTimeStruct *wkStartTime = (myTimeStruct*)malloc(sizeof(myTimeStruct));
+	if(!currentTime || !wkStartTime) {
+		printf(MALLOC_ERROR_MESSAGE);
+		exit(EXIT_FAILURE);
+	}
+	init_times( currentTime, wkStartTime, secondsTillStart);
 
-	// Generate filename & open file
+	 // Generate filename & open file
 	FILE *fp = open_file(weeknum);
 
-	//current date/time at top of page
-	print_update(&time_struct, fp);
-
-	//print agenda
-	print_weeks(weeknum, wkstart_raw, fp);
-
-	//print other
+	// Begin print to file
+	print_update(currentTime, fp);
+	print_weeks(weeknum, wkStartTime->raw, fp);
 	print_gap(LINES_B_HEADS, fp);
 	print_gap(LINES_B_HEADS, fp);
 	fprintf(fp, "OTHER\n=====");
@@ -72,15 +77,16 @@ int main(int argc, char *argv[]) {
 
 	fflush(fp);
 	fclose(fp);
-	printf("done\n");
 
+	printf("done\n");
 	return 0;
 }
 
-void init_times(time_t * time_raw, time_t * wkstart_raw, struct tm * time_struct, int secondsTillStart){
-	time( time_raw );
-	*wkstart_raw = *time_raw + (secondsTillStart);
-	time_struct = localtime(time_raw);
+void init_times(myTimeStruct * currentTime, myTimeStruct  * wkStartTime, int secondsTillStart){
+	currentTime->raw = time(NULL);
+	currentTime->date = *localtime( &(currentTime->raw) );
+	wkStartTime->raw = currentTime->raw + secondsTillStart;
+	wkStartTime->date = *localtime( &(wkStartTime->raw) );
 }
 
 FILE * open_file(weeknum){
@@ -130,8 +136,8 @@ void print_day(time_t info, FILE *fp){
 }
 
 
-void print_update(struct tm *timeinfo, FILE *fp){
-	fprintf(fp,  "Updated: %s\n\n", asctime(timeinfo) );
+void print_update(myTimeStruct * currentTime, FILE *fp){
+	fprintf(fp,  "Updated: %s\n\n", asctime(&(currentTime->date)));
 }
 
 
